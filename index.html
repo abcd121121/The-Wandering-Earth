@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流浪地球推进器模拟</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0c1445 0%, #1a237e 100%);
+            color: #e0f7fa;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            background: rgba(13, 71, 161, 0.3);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            background: linear-gradient(to right, #4fc3f7, #29b6f6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #81d4fa;
+            max-width: 800px;
+            margin: 0 auto 20px;
+        }
+        
+        .description {
+            max-width: 800px;
+            margin: 0 auto 40px;
+            padding: 25px;
+            background: rgba(2, 119, 189, 0.2);
+            border-radius: 12px;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+        
+        .simulation-container {
+            background: rgba(13, 71, 161, 0.25);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+        
+        #solar-system {
+            width: 100%;
+            height: 700px;
+            background-color: rgba(0, 10, 30, 0.7);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #0288d1 0%, #01579b 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(135deg, #039be5 0%, #0277bd 100%);
+        }
+        
+        .btn:active {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        #thrust-toggle {
+            background: linear-gradient(135deg, #e64a19 0%, #bf360c 100%);
+        }
+        
+        #thrust-toggle.running {
+            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+        }
+        
+        .status-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+            background: rgba(3, 102, 168, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .status-item {
+            background: rgba(2, 136, 209, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .status-title {
+            color: #81d4fa;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #4fc3f7;
+        }
+        
+        .unit {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin-top: 20px;
+            padding: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .sun-color {
+            background: radial-gradient(circle, #FF5722 0%, #ff9800 100%);
+        }
+        
+        .earth-color {
+            background: radial-gradient(circle, #4CAF50 0%, #2E7D32 100%);
+        }
+        
+        .orbit-color {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .escape-color {
+            background: rgba(244, 67, 54, 0.3);
+        }
+        
+        .trail-color {
+            background: #29B6F6;
+        }
+        
+        .thruster-color {
+            background: linear-gradient(90deg, #FF5722, #FFC107);
+        }
+        
+        .key-instructions {
+            text-align: center;
+            margin-top: 15px;
+            font-style: italic;
+            color: #81d4fa;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px 0;
+            font-size: 0.9rem;
+            color: #81d4fa;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            #solar-system {
+                height: 500px;
+            }
+            
+            .btn {
+                padding: 10px 18px;
+                font-size: 0.9rem;
+            }
+            
+            .status-value {
+                font-size: 1.2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            #solar-system {
+                height: 400px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .status-item {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>流浪地球推进器模拟</h1>
+            <p class="subtitle">地球发动机全功率启动，试图逃离太阳系引力束缚</p>
+        </header>
+        
+        <div class="description">
+            <p>本模拟展示了《流浪地球》中地球试图逃离太阳系的科学场景。地球依靠分布在全球的上万座行星发动机提供推力，挣脱太阳引力束缚。</p>
+            <p>太阳的引力作用与行星发动机的推力相互抗衡，地球需要达到并维持足够的速度才能成功逃逸太阳系。</p>
+        </div>
+        
+        <div class="simulation-container">
+            <div id="solar-system"></div>
+            
+            <div class="status-panel">
+                <div class="status-item">
+                    <div class="status-title">当前发动机状态</div>
+                    <div id="engine-status" class="status-value">待机</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-title">与太阳距离</div>
+                    <div id="distance" class="status-value">1.00 <span class="unit">AU</span></div>
+                </div>
+                <div class="status-item">
+                    <div class="status-title">逃逸所需速度</div>
+                    <div id="escape-velocity" class="status-value">42.1 <span class="unit">km/s</span></div>
+                </div>
+                <div class="status-item">
+                    <div class="status-title">地球当前速度</div>
+                    <div id="current-velocity" class="status-value">29.8 <span class="unit">km/s</span></div>
+                </div>
+                <div class="status-item">
+                    <div class="status-title">发动机推力</div>
+                    <div id="thrust-value" class="status-value">2.5 × 10²³ <span class="unit">N</span></div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="start-sim" class="btn">启动模拟</button>
+                <button id="thrust-toggle" class="btn">启动推进器</button>
+                <button id="reset-sim" class="btn">重置模拟</button>
+            </div>
+            
+            <div class="key-instructions">
+                <p>提示: 拖动鼠标可以平移视图</p>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color sun-color"></div>
+                <span>太阳</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color earth-color"></div>
+                <span>地球</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color orbit-color"></div>
+                <span>地球轨道</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color escape-color"></div>
+                <span>逃逸边界</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color trail-color"></div>
+                <span>地球轨迹</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color thruster-color"></div>
+                <span>推进器火焰</span>
+            </div>
+        </div>
+        
+        <footer>
+            <p>流浪地球推进器模拟 | 基于D3.js的引力物理模拟 | 科学可视化项目</p>
+        </footer>
+    </div>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // 常量定义
+            const AU = 150; // 1天文单位约150像素
+            const SOLAR_MASS = 1.989e30; // 太阳质量(kg)
+            const G = 6.67430e-11; // 引力常数
+            const ESCAPE_VELOCITY = 42100; // 逃逸速度(m/s)
+            const ESCAPE_DISTANCE = 4; // 逃逸边界(天文单位)
+            const INITIAL_VELOCITY = 29800; // 地球初始轨道速度(m/s)
+            const THRUST_FORCE = 2.5e23; // 推进器推力(N)
+            const EARTH_MASS = 5.972e24; // 地球质量(kg)
+            const MAX_VELOCITY = 42000; // 限制最高速度为42 km/s
+            
+            // 模拟变量
+            let time = 0;
+            let earthX = 0; // 初始位置 (AU)
+            let earthY = 1; // 初始位置 (AU)
+            let velocity = INITIAL_VELOCITY;
+            let direction = { x: 1, y: 0 }; // 初始运动方向（顺时针）
+            let thrusting = false;
+            let simulationRunning = false;
+            let trailPoints = [];
+            let animationId = null;
+            let orbitAngle = 0; // 轨道角度
+            
+            // 平移相关变量
+            let isDragging = false;
+            let startPos = [0, 0];
+            let translate = [0, 0];
+            
+            // 物理模型参数
+            const timeStep = 3600; // 每个时间步代表多少秒 (1小时)
+            const trailLength = 200; // 轨迹点数
+            const orbitSpeed = 0.001; // 轨道速度（弧度/时间步）
+            
+            // 获取DOM元素
+            const solarSystem = d3.select("#solar-system");
+            const distanceDisplay = document.getElementById("distance");
+            const currentVelocityDisplay = document.getElementById("current-velocity");
+            const engineStatusDisplay = document.getElementById("engine-status");
+            const startBtn = document.getElementById("start-sim");
+            const thrustBtn = document.getElementById("thrust-toggle");
+            const resetBtn = document.getElementById("reset-sim");
+            
+            // 初始化函数
+            function initializeSolarSystem() {
+                // 清空太阳系容器
+                solarSystem.selectAll("*").remove();
+                
+                // 计算中心位置
+                const containerRect = solarSystem.node().getBoundingClientRect();
+                const centerX = containerRect.width / 2;
+                const centerY = containerRect.height / 2;
+                
+                // 创建SVG画布
+                const svg = solarSystem.append("svg")
+                    .attr("width", "100%")
+                    .attr("height", "100%")
+                    .on("mousedown", startDrag)
+                    .on("mousemove", drag)
+                    .on("mouseup", endDrag)
+                    .on("mouseleave", endDrag);
+                    
+                // 创建组用于容纳所有元素（便于整体平移）
+                const mainGroup = svg.append("g");
+                
+                // 创建定义（用于渐变）
+                const defs = mainGroup.append("defs");
+                
+                // 太阳渐变
+                const sunGradient = defs.append("radialGradient")
+                    .attr("id", "sunGradient")
+                    .attr("cx", "50%")
+                    .attr("cy", "50%")
+                    .attr("r", "50%");
+                sunGradient.append("stop")
+                    .attr("offset", "0%")
+                    .attr("stop-color", "#ff9800");
+                sunGradient.append("stop")
+                    .attr("offset", "70%")
+                    .attr("stop-color", "#ff5722");
+                sunGradient.append("stop")
+                    .attr("offset", "100%")
+                    .attr("stop-color", "#e64a19");
+                
+                // 地球渐变
+                const earthGradient = defs.append("radialGradient")
+                    .attr("id", "earthGradient")
+                    .attr("cx", "50%")
+                    .attr("cy", "50%")
+                    .attr("r", "50%");
+                earthGradient.append("stop")
+                    .attr("offset", "0%")
+                    .attr("stop-color", "#2196F3");
+                earthGradient.append("stop")
+                    .attr("offset", "100%")
+                    .attr("stop-color", "#0D47A1");
+                
+                // 火焰渐变
+                const flameGradient = defs.append("linearGradient")
+                    .attr("id", "flameGradient")
+                    .attr("x1", "0%")
+                    .attr("y1", "0%")
+                    .attr("x2", "100%")
+                    .attr("y2", "0%");
+                flameGradient.append("stop")
+                    .attr("offset", "0%")
+                    .attr("stop-color", "#FF5722");
+                flameGradient.append("stop")
+                    .attr("offset", "100%")
+                    .attr("stop-color", "#FFC107");
+                
+                // 太阳（位于中心）
+                const sunRadius = AU * 0.25;
+                const sun = mainGroup.append("circle")
+                    .attr("class", "sun")
+                    .attr("cx", centerX)
+                    .attr("cy", centerY)
+                    .attr("r", sunRadius)
+                    .attr("fill", "url(#sunGradient)");
+                
+                // 地球轨道
+                const earthOrbit = mainGroup.append("circle")
+                    .attr("class", "earth-orbit")
+                    .attr("cx", centerX)
+                    .attr("cy", centerY)
+                    .attr("r", AU)
+                    .attr("stroke", "rgba(255, 255, 255, 0.3)")
+                    .attr("stroke-width", 1)
+                    .attr("fill", "none");
+                
+                // 逃逸轨道圆
+                const escapeOrbit = mainGroup.append("circle")
+                    .attr("class", "escape-orbit")
+                    .attr("cx", centerX)
+                    .attr("cy", centerY)
+                    .attr("r", ESCAPE_DISTANCE * AU)
+                    .attr("stroke", "rgba(244, 67, 54, 0.3)")
+                    .attr("stroke-width", 1)
+                    .attr("fill", "none");
+                
+                // 地球轨迹
+                const earthTrail = mainGroup.append("path")
+                    .attr("class", "earth-trail")
+                    .attr("fill", "none")
+                    .attr("stroke", "#29B6F6")
+                    .attr("stroke-width", 1.5)
+                    .attr("stroke-opacity", 0.7);
+                
+                // 地球组（包括地球和推进器）
+                const earthGroup = mainGroup.append("g")
+                    .attr("class", "earth-group");
+                
+                // 地球
+                const earthRadius = AU * 0.05;
+                const earth = earthGroup.append("circle")
+                    .attr("class", "earth")
+                    .attr("cx", 0)
+                    .attr("cy", 0)
+                    .attr("r", earthRadius)
+                    .attr("fill", "url(#earthGradient)");
+                
+                // 推进器组
+                const thrustersGroup = earthGroup.append("g")
+                    .attr("class", "thrusters");
+                
+                // 前推进器
+                thrustersGroup.append("path")
+                    .attr("d", d3.path())
+                    .attr("class", "thruster-front")
+                    .attr("fill", "url(#flameGradient)");
+                
+                // 后推进器
+                thrustersGroup.append("path")
+                    .attr("d", d3.path())
+                    .attr("class", "thruster-back")
+                    .attr("fill", "url(#flameGradient)");
+                
+                // 侧推进器（左侧）
+                thrustersGroup.append("path")
+                    .attr("d", d3.path())
+                    .attr("class", "thruster-left")
+                    .attr("fill", "url(#flameGradient)");
+                
+                // 侧推进器（右侧）
+                thrustersGroup.append("path")
+                    .attr("d", d3.path())
+                    .attr("class", "thruster-right")
+                    .attr("fill", "url(#flameGradient)");
+                
+                // 存储元素引用，用于后续更新
+                return {
+                    svg,
+                    mainGroup,
+                    sun,
+                    earthOrbit,
+                    escapeOrbit,
+                    earthTrail,
+                    earthGroup,
+                    earth,
+                    thrustersGroup,
+                    centerX,
+                    centerY
+                };
+            }
+            
+            // 重置模拟
+            function resetSimulation() {
+                // 停止当前动画
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+                
+                // 重置状态变量
+                time = 0;
+                earthX = 0;
+                earthY = 1;
+                velocity = INITIAL_VELOCITY;
+                direction = { x: 1, y: 0 }; // 初始运动方向（顺时针）
+                thrusting = false;
+                simulationRunning = false;
+                trailPoints = [];
+                translate = [0, 0];
+                orbitAngle = 0; // 重置轨道角度
+                
+                // 更新UI状态
+                startBtn.textContent = "启动模拟";
+                thrustBtn.textContent = "启动推进器";
+                thrustBtn.classList.remove("running");
+                engineStatusDisplay.textContent = "待机";
+                
+                // 重新初始化太阳系
+                elements = initializeSolarSystem();
+                
+                // 更新状态显示
+                updateStatusDisplay(velocity);
+                
+                // 绘制地球初始位置
+                updateEarthPosition();
+            }
+            
+            // 更新地球位置
+            function updateEarthPosition() {
+                const { centerX, centerY, earthGroup, earthTrail } = elements;
+                
+                // 计算地球在画布上的像素位置
+                const pixelX = centerX + earthX * AU;
+                const pixelY = centerY + earthY * AU;
+                
+                // 更新地球组位置
+                earthGroup.attr("transform", `translate(${pixelX}, ${pixelY})`);
+                
+                // 更新轨迹
+                trailPoints.push({ x: pixelX, y: pixelY });
+                
+                // 限制轨迹长度
+                if (trailPoints.length > trailLength) {
+                    trailPoints.shift();
+                }
+                
+                // 绘制轨迹
+                const lineGenerator = d3.line()
+                    .x(d => d.x)
+                    .y(d => d.y);
+                
+                earthTrail.attr("d", lineGenerator(trailPoints));
+                
+                // 更新推进器状态
+                updateThrusters();
+            }
+            
+            // 更新推进器显示
+            function updateThrusters() {
+                const { earth, thrustersGroup } = elements;
+                const earthRadius = parseFloat(earth.attr("r"));
+                
+                // 获取所有推进器
+                const frontThruster = thrustersGroup.select(".thruster-front");
+                const backThruster = thrustersGroup.select(".thruster-back");
+                const leftThruster = thrustersGroup.select(".thruster-left");
+                const rightThruster = thrustersGroup.select(".thruster-right");
+                
+                // 计算推进器大小
+                const baseThrusterSize = earthRadius * 0.4;
+                const activeThrusterSize = earthRadius * 0.7;
+                
+                // 计算推进器角度（基于地球速度方向）
+                const angle = Math.atan2(direction.y, direction.x);
+                
+                // 前推进器（如果减速）
+                const frontThrusterSize = thrusting && velocity > ESCAPE_VELOCITY ? activeThrusterSize : baseThrusterSize;
+                const frontThrusterPath = d3.path();
+                frontThrusterPath.moveTo(0, -earthRadius);
+                frontThrusterPath.lineTo(-frontThrusterSize / 2, -earthRadius - frontThrusterSize);
+                frontThrusterPath.lineTo(frontThrusterSize / 2, -earthRadius - frontThrusterSize);
+                frontThrusterPath.closePath();
+                frontThruster.attr("d", frontThrusterPath);
+                frontThruster.attr("opacity", thrusting && velocity > ESCAPE_VELOCITY ? 1 : 0);
+                
+                // 后推进器（如果加速）
+                const backThrusterSize = thrusting ? activeThrusterSize : baseThrusterSize;
+                const backThrusterPath = d3.path();
+                backThrusterPath.moveTo(0, earthRadius);
+                backThrusterPath.lineTo(-backThrusterSize / 2, earthRadius + backThrusterSize);
+                backThrusterPath.lineTo(backThrusterSize / 2, earthRadius + backThrusterSize);
+                backThrusterPath.closePath();
+                backThruster.attr("d", backThrusterPath);
+                backThruster.attr("opacity", thrusting ? 1 : 0);
+                
+                // 侧推进器（始终可见，但大小根据速度调整）
+                const sideThrusterSize = baseThrusterSize * (1 + Math.abs(velocity - ESCAPE_VELOCITY) / ESCAPE_VELOCITY);
+                
+                // 左侧推进器
+                const leftThrusterPath = d3.path();
+                leftThrusterPath.moveTo(-earthRadius, 0);
+                leftThrusterPath.lineTo(-earthRadius - sideThrusterSize, -sideThrusterSize / 2);
+                leftThrusterPath.lineTo(-earthRadius - sideThrusterSize, sideThrusterSize / 2);
+                leftThrusterPath.closePath();
+                leftThruster.attr("d", leftThrusterPath);
+                
+                // 右侧推进器
+                const rightThrusterPath = d3.path();
+                rightThrusterPath.moveTo(earthRadius, 0);
+                rightThrusterPath.lineTo(earthRadius + sideThrusterSize, -sideThrusterSize / 2);
+                rightThrusterPath.lineTo(earthRadius + sideThrusterSize, sideThrusterSize / 2);
+                rightThrusterPath.closePath();
+                rightThruster.attr("d", rightThrusterPath);
+                
+                // 旋转推进器组以匹配速度方向
+                thrustersGroup.attr("transform", `rotate(${(angle * 180 / Math.PI) + 90})`);
+            }
+            
+            // 模拟一步
+            function simulate() {
+                if (!simulationRunning) return;
+                
+                // 更新时间
+                time += timeStep;
+                
+                if (!thrusting) {
+                    // 如果没有启动推进器，地球做顺时针圆周运动
+                    orbitAngle += orbitSpeed;
+                    
+                    // 根据轨道角度计算位置（顺时针）
+                    earthX = Math.sin(orbitAngle);
+                    earthY = Math.cos(orbitAngle);
+                    
+                    // 更新速度方向（顺时针）
+                    direction.x = Math.cos(orbitAngle);
+                    direction.y = -Math.sin(orbitAngle);
+                    
+                    // 保持速度恒定（圆周运动）
+                    velocity = INITIAL_VELOCITY;
+                } else {
+                    // 计算地球到太阳的距离 (AU)
+                    const distanceFromSun = Math.sqrt(earthX * earthX + earthY * earthY);
+                    
+                    // 更新状态显示
+                    updateStatusDisplay(velocity);
+                    
+                    // 检查是否逃逸
+                    if (distanceFromSun > ESCAPE_DISTANCE) {
+                        // 地球成功逃逸
+                        cancelAnimationFrame(animationId);
+                        simulationRunning = false;
+                        startBtn.textContent = "启动模拟";
+                        return;
+                    }
+                    
+                    // 计算引力加速度 (m/s²)
+                    const gravitationalForce = (G * SOLAR_MASS) / (distanceFromSun * distanceFromSun * 1.496e11 * 1.496e11);
+                    const acceleration = gravitationalForce / EARTH_MASS;
+                    
+                    // 计算引力方向
+                    const gravityDirection = {
+                        x: -earthX / distanceFromSun,
+                        y: -earthY / distanceFromSun
+                    };
+                    
+                    // 计算引力引起的速度变化
+                    const gravityVelocityChangeX = gravityDirection.x * acceleration * timeStep;
+                    const gravityVelocityChangeY = gravityDirection.y * acceleration * timeStep;
+                    
+                    // 计算推进器引起的速度变化
+                    let thrustVelocityChangeX = 0;
+                    let thrustVelocityChangeY = 0;
+                    
+                    if (thrusting) {
+                        // 推进器加速度 (m/s²)
+                        const thrustAcceleration = THRUST_FORCE / EARTH_MASS;
+                        
+                        // 推进器始终沿速度方向加速
+                        thrustVelocityChangeX = direction.x * thrustAcceleration * timeStep;
+                        thrustVelocityChangeY = direction.y * thrustAcceleration * timeStep;
+                    }
+                    
+                    // 更新速度
+                    const newVelocityX = direction.x * velocity + gravityVelocityChangeX + thrustVelocityChangeX;
+                    const newVelocityY = direction.y * velocity + gravityVelocityChangeY + thrustVelocityChangeY;
+                    
+                    // 计算新速度大小和方向
+                    velocity = Math.sqrt(newVelocityX * newVelocityX + newVelocityY * newVelocityY);
+                    
+                    // **关键修改：限制速度不超过42 km/s**
+                    velocity = Math.min(velocity, MAX_VELOCITY);
+                    
+                    direction = {
+                        x: newVelocityX / velocity,
+                        y: newVelocityY / velocity
+                    };
+                    
+                    // 更新位置 (AU)
+                    const distanceMoved = (velocity * timeStep) / 1.496e11; // 转换为AU
+                    earthX += direction.x * distanceMoved;
+                    earthY += direction.y * distanceMoved;
+                }
+                
+                // 更新地球位置
+                updateEarthPosition();
+                
+                // 继续模拟
+                animationId = requestAnimationFrame(simulate);
+            }
+            
+            // 更新状态显示
+            function updateStatusDisplay(currentVelocity) {
+                // 计算地球到太阳的距离 (AU)
+                const distanceFromSun = Math.sqrt(earthX * earthX + earthY * earthY);
+                
+                // 更新显示
+                distanceDisplay.textContent = distanceFromSun.toFixed(2);
+                currentVelocityDisplay.textContent = (currentVelocity / 1000).toFixed(1); // 确保显示一位小数
+                engineStatusDisplay.textContent = thrusting ? "运行中" : "待机";
+            }
+            
+            // 开始拖动
+            function startDrag(event) {
+                event.preventDefault();
+                isDragging = true;
+                startPos = [event.clientX - translate[0], event.clientY - translate[1]];
+            }
+            
+            // 拖动中
+            function drag(event) {
+                if (!isDragging) return;
+                event.preventDefault();
+                const pos = [event.clientX - startPos[0], event.clientY - startPos[1]];
+                translate = pos;
+                elements.mainGroup.attr("transform", `translate(${translate[0]}, ${translate[1]})`);
+            }
+            
+            // 结束拖动
+            function endDrag() {
+                isDragging = false;
+            }
+            
+            // 事件监听
+            startBtn.addEventListener("click", function() {
+                if (simulationRunning) {
+                    simulationRunning = false;
+                    cancelAnimationFrame(animationId);
+                    startBtn.textContent = "继续模拟";
+                } else {
+                    simulationRunning = true;
+                    simulate();
+                    startBtn.textContent = "暂停模拟";
+                }
+            });
+            
+            thrustBtn.addEventListener("click", function() {
+                thrusting = !thrusting;
+                if (thrusting) {
+                    thrustBtn.textContent = "关闭推进器";
+                    thrustBtn.classList.add("running");
+                } else {
+                    thrustBtn.textContent = "启动推进器";
+                    thrustBtn.classList.remove("running");
+                }
+            });
+            
+            resetBtn.addEventListener("click", resetSimulation);
+            
+            // 初始化显示
+            let elements = initializeSolarSystem();
+            updateEarthPosition();
+        });
+    </script>
+</body>
+</html>
